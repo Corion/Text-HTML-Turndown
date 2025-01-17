@@ -1,0 +1,429 @@
+package Text::HTML::Turndown 0.01;
+use 5.020;
+use experimental 'signatures';
+use Moo 2;
+use XML::LibXML;
+use List::Util 'reduce', 'max';
+use List::MoreUtils 'first_index';
+use Carp 'croak';
+#use HTML::Selector::XPath 'selector_to_xpath';
+#use List::Util 'reduce';
+
+use Text::HTML::Turndown::Rules;
+use Text::HTML::Turndown::Node;
+use HTML::CollapseWhitespace;
+
+=head1 NAME
+
+Text::HTML::Turndown - convert HTML to Markdown
+
+=head1 SYNOPSIS
+
+  use Text::HTML::Turndown;
+  my $convert = Text::HTML::Turndown->new();
+  my $markdown = $convert->turndown(<<'HTML');
+    <h1>Hello world!</h1>
+  HTML
+  # Hello world!
+  # ------------
+
+=cut
+
+our %COMMONMARK_RULES = (
+    paragraph => {
+        filter => 'p',
+        replacement => sub( $content, $node, $options ) {
+            return "\n\n" . $content . "\n\n"
+        },
+    },
+
+    lineBreak => {
+        filter => 'br',
+
+        replacement => sub($content, $node, $options) {
+          return $options->{br} . "\n"
+        }
+    },
+
+    heading => {
+        filter => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+
+        replacement => sub ($content, $node, $options) {
+            if( $node->nodeName !~ /\AH(\d)\z/i ) {
+                croak sprintf "Unknown node name '%s' for heading", $node->nodeName;
+            }
+            my $hLevel = $1;
+
+            if (($options->{headingStyle} // '') eq 'setext' && $hLevel < 3) {
+                my $underline = ($hLevel == 1 ? '=' : '-') x length($content);
+                return (
+                    "\n\n" . $content . "\n" . $underline . "\n\n"
+                )
+            } else {
+                return "\n\n" . ('#'x $hLevel) . ' ' . $content . "\n\n"
+            }
+        }
+    },
+
+    blockquote => {
+        filter => 'blockquote',
+
+        replacement => sub ($content, $node, $options) {
+          $content =~ s/^\n+|\n+$//g;
+          $content =~ s/^/> /gm;
+          return "\n\n" . $content . "\n\n"
+        }
+    },
+
+
+    list => {
+        filter => ['ul', 'ol'],
+
+        replacement => sub ($content, $node, $options) {
+            my $parent = $node->parentNode;
+            if (uc $parent->nodeName eq 'LI' && $parent->lastChild->isEqual($node->_node)) {
+              return "\n" . $content
+            } else {
+              return "\n\n" . $content . "\n\n"
+            }
+        }
+    },
+
+    listItem => {
+      filter => 'li',
+
+      replacement => sub ($content, $node, $options) {
+        $content =~ s/^\n+//;       # remove leading newlines
+        $content =~ s/\n+$/\n/;     # replace trailing newlines with just a single one
+        $content =~ s/\n/\n    /gm; # indent
+        my $prefix = $options->{bulletListMarker} . '   ';
+        my $parent = $node->parentNode;
+        if (uc $parent->nodeName eq 'OL') {
+          my $start = $parent->getAttribute('start');
+          my @ch = grep { $_->nodeType == 1 } $parent->childNodes;
+          #my @ch = $parent->childNodes;
+          my $index = first_index { $_->isEqual($node->_node) } @ch;
+          $prefix = ($start ? $start + $index : $index + 1) . '.  '
+        }
+        return (
+          $prefix . $content . ($node->nextSibling && $content !~ /\n$/ ? "\n" : '')
+        )
+      }
+    },
+
+    indentedCodeBlock => {
+        filter => sub ($rule, $node, $options) {
+            return (
+              $options->{codeBlockStyle} eq 'indented' &&
+              uc $node->nodeName eq 'PRE' &&
+              $node->firstChild &&
+              uc $node->firstChild->nodeName eq 'CODE'
+            )
+        },
+        replacement => sub($content, $node, $options) {
+            return (
+                "\n\n    " .
+                ($node->firstChild->textContent =~ s/\n/\n    /r) .
+                "\n\n"
+            )
+        },
+    },
+
+    fencedCodeBlock => {
+        filter => sub($rule, $node, $options) {
+            return (
+              $options->{codeBlockStyle} eq 'fenced' &&
+              uc $node->nodeName eq 'PRE' &&
+              $node->firstChild &&
+              uc $node->firstChild->nodeName eq 'CODE'
+            )
+        },
+
+        replacement => sub($content, $node, $options) {
+            my $className = $node->firstChild->getAttribute('class') || '';
+            (my $language) = ($className =~ /language-(\S+)/);
+            $language //= '';
+            my $code = $node->firstChild->textContent;
+
+            my $fenceChar = substr( $options->{fence}, 0, 1 );
+            my $fenceSize = 3;
+            my $fenceInCodeRegex = qr{^${fenceChar}{$fenceSize,}};
+            for ($code =~ /($fenceInCodeRegex)/gm) {
+                if (length( $_ ) >= $fenceSize) {
+                    $fenceSize = length( $_ ) + 1
+                }
+            }
+
+            my $fence = $fenceChar x $fenceSize;
+            return (
+              "\n\n" . $fence . $language . "\n" .
+              ($code =~ s/\n$//r ) .
+              "\n" . $fence . "\n\n"
+            )
+          }
+    },
+    horizontalRule => {
+      filter => 'hr',
+
+      replacement => sub ($content, $node, $options) {
+        return "\n\n" . $options->{hr} . "\n\n"
+      }
+    },
+
+    inlineLink => {
+        filter => sub ($rule, $node, $options) {
+            return (
+              $options->{linkStyle} eq 'inlined' &&
+              uc $node->nodeName eq 'A' &&
+              $node->getAttribute('href')
+            )
+        },
+
+        replacement => sub ($content, $node, $options) {
+            my $href = $node->getAttribute('href');
+            if ($href) { $href =~s/([()])/\\$1/g };
+            my $title = cleanAttribute($node->getAttribute('title'));
+            if ($title) { $title = ' "' . ( $title =~ s/"/\\"/gr ) . '"'; };
+            return "[$content]($href$title)"
+        }
+    },
+
+    emphasis => {
+      filter => ['em', 'i'],
+
+      replacement => sub ($content, $node, $options) {
+          if ($content !~ /\S/) { return '' };
+          return $options->{emDelimiter} . $content . $options->{emDelimiter}
+      }
+    },
+
+    strong => {
+      filter => ['strong', 'b'],
+
+      replacement => sub ($content, $node, $options) {
+          if ($content !~ /\S/) { return '' };
+          return $options->{strongDelimiter} . $content . $options->{strongDelimiter}
+      }
+    },
+
+    code => {
+        filter => sub ($rule, $node, $options) {
+            my $hasSiblings = $node->previousSibling || $node->nextSibling;
+            my $isCodeBlock = (uc $node->parentNode->nodeName eq 'PRE') && !$hasSiblings;
+
+            return ((uc $node->nodeName eq 'CODE') && !$isCodeBlock)
+        },
+
+        replacement => sub($content, $node, $options) {
+            if (!$content) { return '' };
+            $content =~ s/\r?\n|\r/ /g;
+
+            my $extraSpace = $content =~ /^`|^ .*?[^ ].* $|`$/ ? ' ' : '';
+            my $delimiter = '`';
+            my @matches = $content =~ /`+/gm;
+            while (grep { $_ eq $delimiter } @matches) {
+                $delimiter .= '`';
+            }
+
+            return $delimiter . $extraSpace . $content . $extraSpace . $delimiter;
+        }
+    },
+
+    image => {
+        filter => 'img',
+
+        replacement => sub ($content, $node, $options) {
+          my $alt = cleanAttribute($node->getAttribute('alt'));
+          my $src = $node->getAttribute('src') || '';
+          my $title = cleanAttribute($node->getAttribute('title'));
+          my $titlePart = $title ? ' "' . $title . '"' : '';
+          return $src ? "![$alt]($src$titlePart)" : "";
+        }
+    },
+);
+
+has 'rules' => (
+    is => 'ro',
+    required => 1,
+);
+
+has 'options' => (
+    is => 'lazy',
+    default => sub { {} },
+);
+
+has 'html_parser' => (
+    is => 'lazy',
+    default => sub {
+        return XML::LibXML->new();
+    },
+);
+
+our %defaults = (
+    rules => \%COMMONMARK_RULES,
+    headingStyle => 'setext',
+    hr => '* * *',
+    bulletListMarker => '*',
+    codeBlockStyle => 'indented',
+    fence => '```',
+    emDelimiter => '_',
+    strongDelimiter => '**',
+    linkStyle => 'inlined',
+    linkReferenceStyle => 'full',
+    br => '  ',
+    preformattedCode => undef,
+    blankReplacement => sub ($content, $node, $options ) {
+      return $node->isBlock ? "\n\n" : ""
+    },
+    keepReplacement => sub ($content, $node, $options) {
+      return $node->isBlock ? "\n\n" + $node->toString + "\n\n" : $node->toString
+    },
+    defaultReplacement => sub ($content, $node, $options) {
+      return $node->isBlock ? "\n\n" + $content + "\n\n" : $content
+    }
+);
+
+around BUILDARGS => sub( $orig, $class, %args ) {
+
+    my %options;
+
+    for my $k (sort keys %defaults) {
+        $options{ $k } = exists $args{ $k } ? delete $args{ $k } : $defaults{ $k };
+    };
+    $args{ options } = \%options;
+    $args{ rules } = Text::HTML::Turndown::Rules->new( options => \%options, rules => $options{ rules } );
+
+    return $class->$orig(\%args);
+};
+
+our @escapes = (
+  [qr/\\/, '\\\\'],
+  [qr/\*/, '\\*'],
+  [qr/^-/, '\\-'],
+  [qr/^\+ /, '\\+ '],
+  [qr/^(=+)/, '"\\\\".$1'],
+  [qr/^(#{1,6}) /, '"\\\\".$1 '],
+  [qr/`/, '\\`'],
+  [qr/^~~~/, '\\~~~'],
+  [qr/\[/, '\\['],
+  [qr/\]/, '\\]'],
+  [qr/^>/, '\\>'],
+  [qr/_/, '\\_'],
+  [qr/^(\d+)\. /, '$1\\. ']
+);
+
+sub addRule( $self, $name, $rule ) {
+    $self->rules->{ $name } = $rule;
+    return $self
+}
+
+sub escape( $self, $str ) {
+    return reduce( sub {
+        $a =~ s/$b->[0]/"$b->[1]"/ge;
+        $a
+    }, $str, @escapes );
+}
+
+sub process( $self, $parentNode ) {
+    return reduce( sub {
+        my( $output ) = $a;
+        my $node = Text::HTML::Turndown::Node->new( _node => $b, options => $self->options );
+
+        my $replacement = '';
+        if( $node->nodeType == 3 ) {
+            say sprintf '%s %s', $node->nodeName, ($node->isCode ? '1' : '0');
+
+            $replacement = $node->isCode ? $node->nodeValue : $self->escape($node->nodeValue);
+
+        } elsif( $node->nodeType == 1 ) {
+            $replacement = $self->replacementForNode($node);
+        }
+
+        return _join( $output, $replacement )
+    }, '', $parentNode->childNodes->@* );
+}
+
+
+sub isPreOrCode ($node) {
+  return uc($node->nodeName) eq 'PRE' || uc( $node->nodeName ) eq 'CODE'
+}
+
+sub turndown( $self, $input ) {
+    if( ! ref $input ) {
+        if( $input eq '' ) {
+            return ''
+        }
+        $input = $self->html_parser->parse_html_string( $input, { recover => 2, encoding => 'UTF-8' });
+    };
+    $input = HTML::CollapseWhitespace::collapseWhitespace(
+        element => $input,
+        isBlock => \&Text::HTML::Turndown::Node::_isBlock,
+        isVoid  => \&Text::HTML::Turndown::Node::_isVoid,
+        (isPre   => $self->options->{preformattedCode} ? \&isPreOrCode : undef),
+    );
+    my $output = $self->process( $input );
+    return $self->postProcess( $output );
+}
+
+sub postProcess( $self, $output ) {
+    $self->rules->forEach(sub($rule) {
+        if( ref $rule eq 'HASH' ) {
+            my $r = $rule->{append};
+            if(    $r
+                && ref $r
+                && ref $r eq 'CODE' ) {
+                    $output = _join( $output, $r->($self->options));
+            }
+        }
+    });
+
+    $output =~ s/^[\t\r\n]+//;
+    $output =~ s/[\t\r\n\s]+$//;
+
+    return $output;
+}
+
+sub replacementForNode( $self, $node ) {
+    my $rule = $self->rules->forNode( $node );
+    my $content = $self->process( $node );
+    my $whitespace = Text::HTML::Turndown::Node::flankingWhitespace($node, $self->options);
+
+    if( $whitespace->{leading} || $whitespace->{trailing}) {
+        $content =~s/^\s+//;
+        $content =~s/\s+$//;
+    }
+
+    my $res = (
+          $whitespace->{leading}
+        . $rule->{replacement}->($content, $node, $self->options)
+        . $whitespace->{trailing}
+    );
+
+    $res
+}
+
+sub _join ($output, $replacement) {
+  my $s1 = trimTrailingNewlines($output);
+  my $s2 = trimLeadingNewlines($replacement);
+  my $nls = max(length($output) - length($s1), length($replacement)- length($s2));
+  my $separator = substr( "\n\n", 0, $nls);
+
+  return "$s1$separator$s2";
+}
+
+sub cleanAttribute( $attribute ) {
+  (defined $attribute) ? $attribute =~ s/(\n+\s*)+/\n/gr : ''
+}
+
+sub trimLeadingNewlines ($string) {
+    $string =~ s/^\n*//r;
+}
+
+sub trimTrailingNewlines ($string) {
+  # avoid match-at-end regexp bottleneck, see #370
+  my $indexEnd = length($string);
+  while ($indexEnd > 0 && substr( $string, $indexEnd-1, 1 ) eq "\n") { $indexEnd-- };
+  return substr( $string, 0, $indexEnd )
+}
+
+1;
