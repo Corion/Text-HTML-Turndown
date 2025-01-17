@@ -123,7 +123,7 @@ our %COMMONMARK_RULES = (
         replacement => sub( $content, $node, $options, $context ) {
             return (
                 "\n\n    " .
-                ($node->firstChild->textContent =~ s/\n/\n    /r) .
+                ($node->firstChild->textContent =~ s/\n/\n    /gr) .
                 "\n\n"
             )
         },
