@@ -6,8 +6,6 @@ use XML::LibXML;
 use List::Util 'reduce', 'max';
 use List::MoreUtils 'first_index';
 use Carp 'croak';
-#use HTML::Selector::XPath 'selector_to_xpath';
-#use List::Util 'reduce';
 
 use Text::HTML::Turndown::Rules;
 use Text::HTML::Turndown::Node;
