@@ -101,8 +101,23 @@ sub cell ($content, $node) {
 }
 
 sub install ($class, $target) {
+    $target->preprocess(sub($tree) {
+        # We will likely need other/more rules to turn arbitrary HTML
+        # into what a browser has as DOM for tables
+        for my $table ($tree->find('//table')->@*) {
+            # Turn <table><thead><td>...
+            # into <table><thead><tr><td>...
+            if( $table->find( './thead/td' )->@* ) {
+                my $head = $table->find('./thead',$table)->shift;
+                my $tr = $head->ownerDocument->createElement('tr');
+                $tr->appendChild($_) for $head->childNodes;
+                $head->appendChild( $tr );
+            }
+        }
+        return $tree;
+    });
     $target->keep(sub ($node) {
-        my $firstRow = $node->find('.//tr[0]')->unshift;
+        my $firstRow = $node->find('.//tr')->shift;
         return uc $node->nodeName eq 'TABLE' && !isHeadingRow($firstRow)
     });
     for my $key (keys %RULES) {
