@@ -14,6 +14,11 @@ has 'rules' => (
     required => 1,
 );
 
+has '_preprocess' => (
+    is => 'lazy',
+    default => sub { [] },
+);
+
 has '_keep' => (
     is => 'lazy',
     default => sub { [] },
@@ -56,6 +61,10 @@ has 'blankReplacement' => (
 
 sub add( $self, $key, $rule ) {
     unshift $self->array->@*, $rule
+}
+
+sub preprocess( $self, $processor ) {
+    unshift $self->_preprocess->@*, $processor
 }
 
 sub keep( $self, $filter ) {

@@ -337,6 +337,15 @@ around BUILDARGS => sub( $orig, $class, %args ) {
     $args{ options } = \%options;
     $args{ rules } = Text::HTML::Turndown::Rules->new( options => \%options, rules => $options{ rules } );
 
+    $args{ rules }->preprocess(sub($tree) {
+        return HTML::CollapseWhitespace::collapseWhitespace(
+            element => $tree,
+            isBlock => \&Text::HTML::Turndown::Node::_isBlock,
+            isVoid  => \&Text::HTML::Turndown::Node::_isVoid,
+            (isPre   => $options{preformattedCode} ? \&isPreOrCode : undef),
+        );
+    });
+
     return $class->$orig(\%args);
 };
 
@@ -358,6 +367,11 @@ our @escapes = (
 
 sub keep( $self, $filter ) {
     $self->rules->keep($filter);
+    return $self
+}
+
+sub preprocess( $self, $proc ) {
+    $self->rules->preprocess($proc);
     return $self
 }
 
@@ -404,12 +418,11 @@ sub turndown( $self, $input ) {
         }
         $input = $self->html_parser->parse_html_string( $input, { recover => 2, encoding => 'UTF-8' });
     };
-    $input = HTML::CollapseWhitespace::collapseWhitespace(
-        element => $input,
-        isBlock => \&Text::HTML::Turndown::Node::_isBlock,
-        isVoid  => \&Text::HTML::Turndown::Node::_isVoid,
-        (isPre   => $self->options->{preformattedCode} ? \&isPreOrCode : undef),
-    );
+
+    for my $proc ($self->rules->_preprocess->@*) {
+        $input = $proc->($input);
+    }
+
     my $context = {
         references => [],
     };
