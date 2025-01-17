@@ -342,7 +342,7 @@ around BUILDARGS => sub( $orig, $class, %args ) {
 };
 
 our @escapes = (
-  [qr/\\/, 'q{\\\\}'],
+  [qr/\\/, 'q{\\\\\\\\}'],
   [qr/\*/, 'q{\\\\*}'],
   [qr/^-/, 'q{\\\\-}'],
   [qr/^\+ /, 'q{\\\\+ }'],
