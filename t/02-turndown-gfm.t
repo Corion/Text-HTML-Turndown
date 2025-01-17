@@ -27,6 +27,7 @@ for my $t (@tests) {
     my $turndown = Text::HTML::Turndown->new(%$options);
     $turndown->use('Text::HTML::Turndown::Tables');
     $turndown->use('Text::HTML::Turndown::Strikethrough');
+    $turndown->use('Text::HTML::Turndown::Tasklistitems');
 
     if(! is( $turndown->turndown( $input ), $expected, $name )) {
         diag $input;
