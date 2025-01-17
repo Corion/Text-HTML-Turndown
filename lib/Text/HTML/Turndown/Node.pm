@@ -39,6 +39,9 @@ has '_node' => (
         nodeType
         textContent
         getAttribute
+        isEqual
+
+        find
     ]],
 );
 
