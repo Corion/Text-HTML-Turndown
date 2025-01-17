@@ -41,6 +41,8 @@ has '_node' => (
         getAttribute
         isEqual
 
+        toString
+
         find
     ]],
 );
