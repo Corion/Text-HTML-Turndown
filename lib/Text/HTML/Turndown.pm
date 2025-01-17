@@ -32,7 +32,7 @@ Text::HTML::Turndown - convert HTML to Markdown
 our %COMMONMARK_RULES = (
     paragraph => {
         filter => 'p',
-        replacement => sub( $content, $node, $options ) {
+        replacement => sub( $content, $node, $options, $context ) {
             return "\n\n" . $content . "\n\n"
         },
     },
@@ -40,7 +40,7 @@ our %COMMONMARK_RULES = (
     lineBreak => {
         filter => 'br',
 
-        replacement => sub($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
           return $options->{br} . "\n"
         }
     },
@@ -48,7 +48,7 @@ our %COMMONMARK_RULES = (
     heading => {
         filter => ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
 
-        replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
             if( $node->nodeName !~ /\AH(\d)\z/i ) {
                 croak sprintf "Unknown node name '%s' for heading", $node->nodeName;
             }
@@ -68,7 +68,7 @@ our %COMMONMARK_RULES = (
     blockquote => {
         filter => 'blockquote',
 
-        replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
           $content =~ s/^\n+|\n+$//g;
           $content =~ s/^/> /gm;
           return "\n\n" . $content . "\n\n"
@@ -79,7 +79,7 @@ our %COMMONMARK_RULES = (
     list => {
         filter => ['ul', 'ol'],
 
-        replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
             my $parent = $node->parentNode;
             if (uc $parent->nodeName eq 'LI' && $parent->lastChild->isEqual($node->_node)) {
               return "\n" . $content
@@ -92,7 +92,7 @@ our %COMMONMARK_RULES = (
     listItem => {
       filter => 'li',
 
-      replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
         $content =~ s/^\n+//;       # remove leading newlines
         $content =~ s/\n+$/\n/;     # replace trailing newlines with just a single one
         $content =~ s/\n/\n    /gm; # indent
@@ -120,7 +120,7 @@ our %COMMONMARK_RULES = (
               uc $node->firstChild->nodeName eq 'CODE'
             )
         },
-        replacement => sub($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
             return (
                 "\n\n    " .
                 ($node->firstChild->textContent =~ s/\n/\n    /r) .
@@ -139,7 +139,7 @@ our %COMMONMARK_RULES = (
             )
         },
 
-        replacement => sub($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
             my $className = $node->firstChild->getAttribute('class') || '';
             (my $language) = ($className =~ /language-(\S+)/);
             $language //= '';
@@ -165,7 +165,7 @@ our %COMMONMARK_RULES = (
     horizontalRule => {
       filter => 'hr',
 
-      replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
         return "\n\n" . $options->{hr} . "\n\n"
       }
     },
@@ -179,7 +179,7 @@ our %COMMONMARK_RULES = (
             )
         },
 
-        replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
             my $href = $node->getAttribute('href');
             if ($href) { $href =~s/([()])/\\$1/g };
             my $title = cleanAttribute($node->getAttribute('title'));
@@ -188,10 +188,55 @@ our %COMMONMARK_RULES = (
         }
     },
 
+    referenceLink => {
+        filter => sub ($rule, $node, $options) {
+            return (
+              $options->{linkStyle} eq 'referenced' &&
+              uc $node->nodeName eq 'A' &&
+              $node->getAttribute('href')
+            )
+        },
+
+        replacement => sub( $content, $node, $options, $context ) {
+            my $href = $node->getAttribute('href');
+            my $title = cleanAttribute($node->getAttribute('title'));
+            if ($title) { $title = ' "$title"' };
+            my $replacement;
+            my $reference;
+
+            if( $options->{linkReferenceStyle} eq 'collapsed' ) {
+                $replacement = '[' . $content . '][]';
+                $reference = '[' . $content . ']: ' . $href .$title;
+
+            } elsif( $options->{linkReferenceStyle} eq 'shortcut' ) {
+                $replacement = '[' . $content . ']';
+                $reference = '[' . $content . ']: ' . $href .$title;
+
+            } else {
+                my $id = scalar $context->{references}->@* + 1;
+                $replacement = '[' . $content . '][' . $id . ']';
+                $reference = '[' . $id . ']: ' . $href . $title;
+            }
+
+            push $context->{references}->@*, $reference;
+            return $replacement
+        },
+
+        append => sub ($options, $context) {
+            my $references = '';
+            if ($context->{references}->@*) {
+                $references = "\n\n" . join( "\n", $context->{references}->@* ) . "\n\n";
+                $context->{references} = []; # Reset references
+            }
+            return $references
+        }
+    },
+
+
     emphasis => {
       filter => ['em', 'i'],
 
-      replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
           if ($content !~ /\S/) { return '' };
           return $options->{emDelimiter} . $content . $options->{emDelimiter}
       }
@@ -200,7 +245,7 @@ our %COMMONMARK_RULES = (
     strong => {
       filter => ['strong', 'b'],
 
-      replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
           if ($content !~ /\S/) { return '' };
           return $options->{strongDelimiter} . $content . $options->{strongDelimiter}
       }
@@ -214,7 +259,7 @@ our %COMMONMARK_RULES = (
             return ((uc $node->nodeName eq 'CODE') && !$isCodeBlock)
         },
 
-        replacement => sub($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
             if (!$content) { return '' };
             $content =~ s/\r?\n|\r/ /g;
 
@@ -232,7 +277,7 @@ our %COMMONMARK_RULES = (
     image => {
         filter => 'img',
 
-        replacement => sub ($content, $node, $options) {
+        replacement => sub( $content, $node, $options, $context ) {
           my $alt = cleanAttribute($node->getAttribute('alt'));
           my $src = $node->getAttribute('src') || '';
           my $title = cleanAttribute($node->getAttribute('title'));
@@ -272,14 +317,14 @@ our %defaults = (
     linkReferenceStyle => 'full',
     br => '  ',
     preformattedCode => undef,
-    blankReplacement => sub ($content, $node, $options ) {
+    blankReplacement => sub ($content, $node, $options, $context ) {
       return $node->isBlock ? "\n\n" : ""
     },
-    keepReplacement => sub ($content, $node, $options) {
-      return $node->isBlock ? "\n\n" + $node->toString + "\n\n" : $node->toString
+    keepReplacement => sub ($content, $node, $options, $context) {
+      return $node->isBlock ? "\n\n" . $node->toString . "\n\n" : $node->toString
     },
-    defaultReplacement => sub ($content, $node, $options) {
-      return $node->isBlock ? "\n\n" + $content + "\n\n" : $content
+    defaultReplacement => sub ($content, $node, $options, $context) {
+      return $node->isBlock ? "\n\n" . $content . "\n\n" : $content
     }
 );
 
@@ -324,7 +369,7 @@ sub escape( $self, $str ) {
     }, $str, @escapes );
 }
 
-sub process( $self, $parentNode ) {
+sub process( $self, $parentNode, $context ) {
     return reduce( sub {
         my( $output ) = $a;
         my $node = Text::HTML::Turndown::Node->new( _node => $b, options => $self->options );
@@ -336,7 +381,7 @@ sub process( $self, $parentNode ) {
             $replacement = $node->isCode ? $node->nodeValue : $self->escape($node->nodeValue);
 
         } elsif( $node->nodeType == 1 ) {
-            $replacement = $self->replacementForNode($node);
+            $replacement = $self->replacementForNode($node, $context);
         }
 
         return _join( $output, $replacement )
@@ -361,18 +406,21 @@ sub turndown( $self, $input ) {
         isVoid  => \&Text::HTML::Turndown::Node::_isVoid,
         (isPre   => $self->options->{preformattedCode} ? \&isPreOrCode : undef),
     );
-    my $output = $self->process( $input );
-    return $self->postProcess( $output );
+    my $context = {
+        references => [],
+    };
+    my $output = $self->process( $input, $context );
+    return $self->postProcess( $output, $context );
 }
 
-sub postProcess( $self, $output ) {
+sub postProcess( $self, $output, $context ) {
     $self->rules->forEach(sub($rule) {
         if( ref $rule eq 'HASH' ) {
             my $r = $rule->{append};
             if(    $r
                 && ref $r
                 && ref $r eq 'CODE' ) {
-                    $output = _join( $output, $r->($self->options));
+                    $output = _join( $output, $r->($self->options, $context));
             }
         }
     });
@@ -383,9 +431,9 @@ sub postProcess( $self, $output ) {
     return $output;
 }
 
-sub replacementForNode( $self, $node ) {
+sub replacementForNode( $self, $node, $context ) {
     my $rule = $self->rules->forNode( $node );
-    my $content = $self->process( $node );
+    my $content = $self->process( $node, $context );
     my $whitespace = Text::HTML::Turndown::Node::flankingWhitespace($node, $self->options);
 
     if( $whitespace->{leading} || $whitespace->{trailing}) {
@@ -395,7 +443,7 @@ sub replacementForNode( $self, $node ) {
 
     my $res = (
           $whitespace->{leading}
-        . $rule->{replacement}->($content, $node, $self->options)
+        . $rule->{replacement}->($content, $node, $self->options, $context)
         . $whitespace->{trailing}
     );
 

@@ -39,7 +39,7 @@ has 'array' => (
 has 'defaultReplacement' => (
     is => 'lazy',
     default => sub {
-        sub( $content, $node, $options ) {
+        sub( $content, $node, $options, $context ) {
             $node->isBlock ? "\n\n" . $content . "\n\n" : $content
         }
     }
@@ -48,7 +48,7 @@ has 'defaultReplacement' => (
 has 'blankReplacement' => (
     is => 'lazy',
     default => sub {
-        sub( $content, $node, $options ) {
+        sub( $content, $node, $options, $context ) {
             $node->isBlock ? "\n\n" : ''
         }
     }
