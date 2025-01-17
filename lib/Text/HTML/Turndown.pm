@@ -6,6 +6,7 @@ use XML::LibXML;
 use List::Util 'reduce', 'max';
 use List::MoreUtils 'first_index';
 use Carp 'croak';
+use Module::Load 'load';
 
 use Text::HTML::Turndown::Rules;
 use Text::HTML::Turndown::Node;
@@ -355,8 +356,13 @@ our @escapes = (
   [qr/^(\d+)\. /, '$1.q{\\. }']
 );
 
+sub keep( $self, $filter ) {
+    $self->rules->keep($filter);
+    return $self
+}
+
 sub addRule( $self, $name, $rule ) {
-    $self->rules->{ $name } = $rule;
+    $self->rules->add( $name, $rule );
     return $self
 }
 
@@ -470,6 +476,15 @@ sub trimTrailingNewlines ($string) {
   my $indexEnd = length($string);
   while ($indexEnd > 0 && substr( $string, $indexEnd-1, 1 ) eq "\n") { $indexEnd-- };
   return substr( $string, 0, $indexEnd )
+}
+
+sub use( $self, $plugin ) {
+    if( ref $plugin and ref $plugin eq 'ARRAY' ) {
+        $self->use( $_ ) for $plugin->@*
+    } else {
+        load $plugin;
+        $plugin->install( $self );
+    }
 }
 
 1;
