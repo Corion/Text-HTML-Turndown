@@ -18,7 +18,13 @@ our %RULES = (
             my $borderCells = '';
             my $alignMap = { left => ':--', right => '--:', center => ':-:' };
 
+            # Eliminate empty rows
+            if( $content =~ m!\A\|(  \|)+\z! ) {
+                return '';
+            }
+
             if (isHeadingRow($node)) {
+                #warn "Header content: [$content]";
                 my @ch = $node->childNodes;
                 for my $ch ($node->childNodes) {
                     my $border = '---';

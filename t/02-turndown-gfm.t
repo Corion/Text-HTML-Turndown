@@ -25,7 +25,7 @@ for my $t (@tests) {
     my @input = $t->findnodes('./*[@class="input"]');
     my $input = join "", map { $_->toString } $input[0]->childNodes;
     my $expected = "" . $t->findnodes('./*[@class="expected"]')->to_literal;
-    next if $input =~ /<table>/;
+    #next if $input =~ /<table>/;
     #next if $name !~ /code block with multiple/;
     #next if $name !~ /empty rows/;
 
