@@ -362,6 +362,9 @@ our @escapes = (
   [qr/\]/, 'q{\\\\]}'],
   [qr/^>/, 'q{\\\\>}'],
   [qr/_/, 'q{\\\\_}'],
+  # Joplin uses this, but I wonder why there are underscores in the source HTML
+  # that should not be escaped?!
+  #[qr/(^|\p{Punctuation}|\p{Separator}|\p{Symbol})_(\P{Separator})/, '$1.q{\\\\_}.$2'],
   [qr/^(\d+)\. /, '$1.q{\\. }']
 );
 
