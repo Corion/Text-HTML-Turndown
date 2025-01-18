@@ -61,6 +61,10 @@ has ['isVoid', 'hasVoid', 'isBlock', 'isMeaningfulWhenBlank', 'hasMeaningfulWhen
     required => 1,
 );
 
+sub className( $self ) {
+    $self->getAttribute('class');
+}
+
 sub _isCode( $self ) {
     return 1 if uc $self->nodeName eq 'CODE';
     my $p = $self->parentNode;
