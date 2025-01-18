@@ -394,7 +394,7 @@ sub process( $self, $parentNode, $context ) {
 
         my $replacement = '';
         if( $node->nodeType == 3 ) {
-            say sprintf '%s %s', $node->nodeName, ($node->isCode ? '1' : '0');
+            #say sprintf '%s %s', $node->nodeName, ($node->isCode ? '1' : '0');
 
             $replacement = $node->isCode ? $node->nodeValue : $self->escape($node->nodeValue);
 
