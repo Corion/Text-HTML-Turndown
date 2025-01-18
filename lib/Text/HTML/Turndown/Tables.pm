@@ -41,8 +41,10 @@ our %RULES = (
         # Only convert tables with a heading row.
         # Tables with no heading row are kept using `keep` (see below).
         filter => sub ($rule, $node, $options) {
-            my $firstRow = $node->find('.//tr[0]')->unshift;
-            return uc $node->nodeName eq 'TABLE' && isHeadingRow($firstRow)
+            my $firstRow = $node->find('.//td/..', $node)->shift;
+            return    uc $node->nodeName eq 'TABLE'
+                   && $firstRow
+                   && isHeadingRow($firstRow)
         },
 
         replacement => sub( $content, $node, $options, $context ) {
@@ -68,10 +70,11 @@ our %RULES = (
 sub isHeadingRow ($tr) {
     return if ! $tr;
     my $parentNode = $tr->parentNode;
+    my $n = $tr->can('_node') ? $tr->_node : $tr;
     return (
-      uc $parentNode->nodeName eq 'THEAD' ||
+      uc ($parentNode->nodeName) eq 'THEAD' ||
       (
-           $tr->isEqual($parentNode->firstChild)
+           $n->isEqual($parentNode->firstChild)
         && (uc $parentNode->nodeName eq 'TABLE' || isFirstTbody($parentNode))
         && all { uc($_->nodeName) eq 'TH' } $tr->childNodes
       )
