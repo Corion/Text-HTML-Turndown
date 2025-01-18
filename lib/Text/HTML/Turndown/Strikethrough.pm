@@ -8,7 +8,7 @@ our %RULES = (
 
         filter => ['del', 's', 'strike'],
         replacement => sub( $content, $node, $options, $context ) {
-          return '~' . $content . '~'
+          return '~~' . $content . '~~'
         }
     }
 );
