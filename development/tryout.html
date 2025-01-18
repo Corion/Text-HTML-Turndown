@@ -1,225 +1,101 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
 <script src=https://unpkg.com/turndown/dist/turndown.js></script>
-
 <script src=https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js></script>
-
-
-
-<x-script src=https://spec.commonmark.org/dingus/commonmark.js></x-script>
-
 <script src=https://cdn.jsdelivr.net/npm/marked/marked.min.js></script>
-
 </head>
 
 <body>
-
 <span id="toolbar">
-
 <a href="#" onclick="javascript:pasteHtmlAtCaret('<h3>Header</h3>')">H3</a>
-
 </span>
-
 <div contenteditable="true" id="editor">
-
 <div>My content</div>
-
 <ul>
-
 <li>Item 1</li>
-
 </ul>
-
 </div>
-
 <h1>Markdown</h1>
-
 <code id="markdown" style="white-space: pre-wrap;" contentEditable="true">
-
 </code>
-
 <h1>Source</h1>
-
 <div id="dump">
-
 </div>
-
-
 
 <script>
-
-
-
 function pasteHtmlAtCaret(html, selectPastedContent) {
-
     let sel, range;
-
     if (window.getSelection) {
-
         // IE9 and non-IE
-
         sel = window.getSelection();
-
         if (sel.getRangeAt && sel.rangeCount) {
-
             range = sel.getRangeAt(0);
-
             range.deleteContents();
 
-
-
             // Range.createContextualFragment() would be useful here but is
-
             // only relatively recently standardized and is not supported in
-
             // some browsers (IE9, for one)
-
             const el = document.createElement("div");
-
             el.innerHTML = html;
-
             let frag = document.createDocumentFragment(), node, lastNode;
-
             while ( (node = el.firstChild) ) {
-
                 lastNode = frag.appendChild(node);
-
             }
-
             var firstNode = frag.firstChild;
-
             range.insertNode(frag);
 
-
-
             // Preserve the selection
-
             if (lastNode) {
-
                 range = range.cloneRange();
-
                 range.setStartAfter(lastNode);
-
                 if (selectPastedContent) {
-
                     range.setStartBefore(firstNode);
-
                 } else {
-
                     range.collapse(true);
-
                 }
-
                 sel.removeAllRanges();
-
                 sel.addRange(range);
-
             }
-
         }
-
     } else if ( (sel = document.selection) && sel.type != "Control") {
-
         // IE < 9
-
         var originalRange = sel.createRange();
-
         originalRange.collapse(true);
-
         sel.createRange().pasteHTML(html);
-
         if (selectPastedContent) {
-
             range = sel.createRange();
-
             range.setEndPoint("StartToStart", originalRange);
-
             range.select();
-
         }
-
     }
-
 }
-
-
 
 function escape(htmlStr) {
-
    return htmlStr.replace(/&/g, "&amp;")
-
          .replace(/</g, "&lt;")
-
          .replace(/>/g, "&gt;")
-
          .replace(/"/g, "&quot;")
-
          .replace(/'/g, "&#39;");
-
-
-
 }
 
-
-
 const ed = document.getElementById("editor");
-
 const dump = document.getElementById("dump");
-
 const md = document.getElementById("markdown");
-
 var gfm = turndownPluginGfm.gfm
-
 const turndownService = new TurndownService();
-
 turndownService.use(gfm)
 
 ed.addEventListener("input", (e) => {
-
-                md.innerHTML = turndownService.turndown(ed)
-
+    md.innerHTML = turndownService.turndown(ed)
     dump.innerHTML = escape(ed.innerHTML);
-
 });
-
-
-
-/*
-
-const commonmark = window.commonmark;
-
-const writer = new commonmark.HtmlRenderer({ sourcepos: true });
-
-const reader = new commonmark.Parser();
-
-*/
-
-
 
 md.addEventListener("input", (e) => {
-
     const text = md.innerHTML;
-
-                //const parsed = reader.parse(text);
-
-                //console.log("Updating HTML rendering", text);
-
-                ed.innerHTML = marked.parse(text);
-
+    ed.innerHTML = marked.parse(text);
     dump.innerHTML = escape(ed.innerHTML);
-
 });
-
-
-
 </script>
-
-
-
 </body>
-
 </html>
