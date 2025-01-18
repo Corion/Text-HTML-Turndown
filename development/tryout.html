@@ -20,7 +20,7 @@
 <code id="markdown" style="white-space: pre-wrap;" contentEditable="true">
 </code>
 <h1>Source</h1>
-<div id="dump">
+<div id="dump" style="white-space: pre-wrap;" contentEditable="true">
 </div>
 
 <script>
@@ -79,6 +79,14 @@ function escape(htmlStr) {
          .replace(/'/g, "&#39;");
 }
 
+function unescape(htmlStr) {
+   return htmlStr.replace(/&amp;/g, "&")
+         .replace(/&lt;/g, "<")
+         .replace(/&gt;/g, ">")
+         .replace(/&quot;/g, '"')
+         .replace(/&#39;/g, "'");
+}
+
 const ed = document.getElementById("editor");
 const dump = document.getElementById("dump");
 const md = document.getElementById("markdown");
@@ -95,6 +103,12 @@ md.addEventListener("input", (e) => {
     const text = md.innerHTML;
     ed.innerHTML = marked.parse(text);
     dump.innerHTML = escape(ed.innerHTML);
+});
+
+dump.addEventListener("input", (e) => {
+    const text = unescape(dump.innerHTML);
+    ed.innerHTML = text;
+    md.innerHTML = turndownService.turndown(text)
 });
 </script>
 </body>
