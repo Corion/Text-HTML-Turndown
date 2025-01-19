@@ -1,4 +1,4 @@
-package HTML::CollapseWhitespace;
+package HTML::CollapseWhitespace 0.01;
 use 5.020;
 use experimental 'signatures';
 
