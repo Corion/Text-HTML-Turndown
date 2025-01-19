@@ -4,7 +4,7 @@ use Test2::V0 '-no_srand';
 use XML::LibXML;
 use File::Basename;
 use Text::HTML::Turndown;
-use Mojo::JSON 'decode_json';
+use JSON::Tiny 'decode_json';
 
 open my $fh, '<:encoding(UTF-8)', dirname($0) . "/index-gfm.html"
     or die "Couldn't read 'index-gfm.html': $!";
