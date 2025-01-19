@@ -1,17 +1,54 @@
-package HTML::CollapseWhitespace 0.01;
+package Text::HTML::CollapseWhitespace 0.01;
 use 5.020;
 use experimental 'signatures';
+use Exporter 'import';
+
+require Text::HTML::Turndown::Node;
+
+our @EXPORT_OK = ('collapseWhitespace');
 
 =head1 NAME
 
-HTML::CollapseWhitespace - remove extraneous whitespace from a fragment
+Text::HTML::CollapseWhitespace - remove extraneous whitespace from a fragment
+
+=head1 SYNOPSIS
+
+  my $tree = XML::LibXML->parse_html_string(
+      $input,
+      { recover => 2, encoding => 'UTF-8' }
+  );
+  $tree = collapseWhitespace($tree);
+
+=cut
+
+=head1 FUNCTIONS
+
+=head2 C<< collapseWhitespace (%options) >>
+
+  collapseWhitespace( element => $tree,
+      isVoid  => \&_isVoid,
+  )
+
+  our @voidElements = (
+    'AREA', 'BASE', 'BR', 'COL', 'COMMAND', 'EMBED', 'HR', 'IMG', 'INPUT',
+    'KEYGEN', 'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR'
+  );
+  our %voidElements = map { $_ => 1, lc $_ => 1 } @voidElements;
+  sub _isVoid( $element ) {
+      $voidElements{ $element->nodeName }
+  }
+
+This function modifies the tree in-place and removes extraneous whitespace
+from the elements. The C<isPre>, C<isVoid> and C<isBlock> predicates allow you
+to customize what elements are recognized as pre , void or block HTML elements
+if needed.
 
 =cut
 
 sub collapseWhitespace (%options) {
   my $element = $options{ element }; # should be XML::LibXML
-  my $isBlock = $options{ isBlock };
-  my $isVoid  = $options{ isVoid  };
+  my $isBlock = $options{ isBlock } // \&Text::HTML::Turndown::Node::_isBlock;
+  my $isVoid  = $options{ isVoid  } // \&Text::HTML::Turndown::Node::_isVoid;
   my $isPre   = $options{ isPre } || sub ($node) {
     return uc($node->nodeName) eq 'PRE'
   };

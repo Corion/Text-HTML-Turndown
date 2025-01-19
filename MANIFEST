@@ -1,6 +1,6 @@
 .gitignore
 Changes
-lib/HTML/CollapseWhitespace.pm
+lib/Text/HTML/CollapseWhitespace.pm
 lib/Text/HTML/Turndown.pm
 lib/Text/HTML/Turndown/GFM.pm
 lib/Text/HTML/Turndown/HighlightedCodeBlock.pm

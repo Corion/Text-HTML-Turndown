@@ -10,7 +10,7 @@ use Module::Load 'load';
 
 use Text::HTML::Turndown::Rules;
 use Text::HTML::Turndown::Node;
-use HTML::CollapseWhitespace;
+use Text::HTML::CollapseWhitespace 'collapseWhitespace';
 
 =head1 NAME
 
@@ -340,7 +340,7 @@ around BUILDARGS => sub( $orig, $class, %args ) {
     $args{ rules } = Text::HTML::Turndown::Rules->new( options => \%options, rules => $options{ rules } );
 
     $args{ rules }->preprocess(sub($tree) {
-        return HTML::CollapseWhitespace::collapseWhitespace(
+        return collapseWhitespace(
             element => $tree,
             isBlock => \&Text::HTML::Turndown::Node::_isBlock,
             isVoid  => \&Text::HTML::Turndown::Node::_isVoid,
