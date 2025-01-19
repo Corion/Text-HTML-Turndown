@@ -26,6 +26,8 @@ Text::HTML::Turndown - convert HTML to Markdown
   # Hello world!
   # ------------
 
+This is an adapation of the C<turndown> libraries.
+
 =cut
 
 our %COMMONMARK_RULES = (
@@ -504,3 +506,36 @@ sub use( $self, $plugin ) {
 }
 
 1;
+
+=head1 MARKDOWN FLAVOURS / FEATURES
+
+
+
+=head1 COMPATIBILITY
+
+This port aims to be compatible with the Javascript code and uses the same
+test suite. But the original library does not pass its tests and the Joplin
+part does not use the original tests.
+
+=over 4
+
+=item Table headers
+
+For Github flavoured markdown, Joplin aims to always force table headers in
+markdown. This libary does not (yet).
+
+=back
+
+=head1 SEE ALSO
+
+The original library (unmaintained):
+
+L<https://github.com/mixmark-io/turndown/>
+
+The Joplin library (maintained):
+
+L<https://github.com/laurent22/joplin/tree/dev/packages/turndown>
+
+L<https://github.com/laurent22/joplin/tree/dev/packages/turndown-plugin-gfm>
+
+=cut
