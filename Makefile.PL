@@ -52,6 +52,7 @@ my %module = (
     PREREQ_PM => {
         'experimental'        => '0.034',
 
+        'Carp'                => 0,
         'File::Basename'      => 0,
         'Module::Load'        => 0,
         'Moo'                 => 2,
