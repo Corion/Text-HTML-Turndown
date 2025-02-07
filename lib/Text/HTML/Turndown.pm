@@ -1,4 +1,4 @@
-package Text::HTML::Turndown 0.01;
+package Text::HTML::Turndown 0.02;
 use 5.020;
 use experimental 'signatures';
 use stable 'postderef';
