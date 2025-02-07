@@ -2,6 +2,7 @@ package Text::HTML::Turndown::Rules 0.01;
 use 5.020;
 use Moo;
 use experimental 'signatures';
+use stable 'postderef';
 use Carp 'croak';
 
 has 'options' => (

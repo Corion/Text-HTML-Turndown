@@ -1,6 +1,7 @@
 package Text::HTML::Turndown::GFM 0.01;
 use 5.020;
 use experimental 'signatures';
+use stable 'postderef';
 
 =head1 NAME
 

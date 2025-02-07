@@ -1,6 +1,7 @@
 package Text::HTML::Turndown::Tasklistitems 0.01;
 use 5.020;
 use experimental 'signatures';
+use stable 'postderef';
 use List::MoreUtils 'all';
 
 our %RULES = (

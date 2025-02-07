@@ -1,6 +1,7 @@
 package Text::HTML::Turndown 0.01;
 use 5.020;
 use experimental 'signatures';
+use stable 'postderef';
 use Moo 2;
 use XML::LibXML;
 use List::Util 'reduce', 'max';
