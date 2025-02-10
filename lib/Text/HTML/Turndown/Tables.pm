@@ -1,4 +1,4 @@
-package Text::HTML::Turndown::Tables 0.03;
+package Text::HTML::Turndown::Tables 0.04;
 use 5.020;
 use experimental 'signatures';
 use stable 'postderef';
