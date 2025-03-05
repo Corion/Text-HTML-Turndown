@@ -38,6 +38,9 @@
             "List::Util" : "0",
             "Module::Load" : "0",
             "Moo" : "2",
+            "PerlX::Maybe" : "0",
+            "Text::CleanFragment" : "0",
+            "Text::FrontMatter::YAML" : "0",
             "XML::LibXML" : "0",
             "experimental" : "0.034",
             "perl" : "5.020"
