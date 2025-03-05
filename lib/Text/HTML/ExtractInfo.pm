@@ -1,4 +1,4 @@
-package Text::HTML::ExtractInfo 0.01;
+package Text::HTML::ExtractInfo 0.04;
 use 5.020;
 use stable 'postderef';
 use experimental 'signatures';
