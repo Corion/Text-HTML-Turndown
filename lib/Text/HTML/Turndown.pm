@@ -183,7 +183,7 @@ our %COMMONMARK_RULES = (
 
         replacement => sub( $content, $node, $options, $context ) {
             my $href = $node->getAttribute('href');
-            if ($href) { $href =~s/([()])/\\$1/g };
+            if ($href) { $href =~s/([\(\)])/\\$1/g };
             my $title = cleanAttribute($node->getAttribute('title'));
             if ($title) { $title = ' "' . ( $title =~ s/"/\\"/gr ) . '"'; };
             return "[$content]($href$title)"
