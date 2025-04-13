@@ -186,7 +186,14 @@ our %COMMONMARK_RULES = (
             if ($href) { $href =~s/([\(\)])/\\$1/g };
             my $title = cleanAttribute($node->getAttribute('title'));
             if ($title) { $title = ' "' . ( $title =~ s/"/\\"/gr ) . '"'; };
-            return "[$content]($href$title)"
+
+            # Don't emit a link if it has no content
+            # Content might be an image
+            if( length($content)) {
+                return "[$content]($href$title)"
+            } else {
+                return ""
+            }
         }
     },
 
