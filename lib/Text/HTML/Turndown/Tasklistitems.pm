@@ -11,7 +11,7 @@ our %RULES = (
                    && uc $node->parentNode->nodeName eq 'LI'
         },
         replacement => sub( $content, $node, $options, $context ) {
-            return ($node->getAttribute('checked') ? '[x]' : '[ ]') . ' '
+            return (defined $node->getAttribute('checked') ? '[x]' : '[ ]') . ' '
         }
     },
 );
