@@ -4,6 +4,24 @@ use experimental 'signatures';
 use stable 'postderef';
 use List::MoreUtils 'all';
 
+=head1 NAME
+
+Text::HTML::Turndown::Tables - rules for Markdown Tables
+
+=head1 SYNOPSIS
+
+  use Text::HTML::Turndown;
+  my $turndown = Text::HTML::Turndown->new(%$options);
+  $turndown->use('Text::HTML::Turndown::Tables');
+
+  my $markdown = $convert->turndown(<<'HTML');
+    <table><tr><td>Hello</td><td>world!</td></tr></table>
+  HTML
+  # | Hello | world! |
+  # | ----- | ------ |
+
+=cut
+
 our %RULES = (
 
     tableCell => {
