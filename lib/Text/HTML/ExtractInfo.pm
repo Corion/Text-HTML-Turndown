@@ -65,7 +65,7 @@ our %elements = (
 sub _get_value( $node ) {
     if( my $c = $node->can( 'value' )) {
         return $c->($node)
-    } elsif( my $c = $node->can( 'textContent' )) {
+    } elsif( $c = $node->can( 'textContent' )) {
         return $c->($node)
     } else {
         croak "Don't know how to handle " . $node->toString
