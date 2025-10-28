@@ -27,7 +27,7 @@ our %RULES = (
     tableCell => {
         filter => ['th', 'td'],
         replacement => sub( $content, $node, $options, $context ) {
-          return cell($content, $node);
+          return cell($content, $node, undef);
         },
     },
 
@@ -163,6 +163,7 @@ sub install ($class, $target) {
 }
 
 1;
+
 =head1 REPOSITORY
 
 The public repository of this module is
