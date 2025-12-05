@@ -123,14 +123,14 @@ our %COMMONMARK_RULES = (
             return (
               $options->{codeBlockStyle} eq 'indented' &&
               uc $node->nodeName eq 'PRE' &&
-              $node->firstChild &&
-              uc $node->firstChild->nodeName eq 'CODE'
+              $node->firstNonBlankChild &&
+              uc $node->firstNonBlankChild->nodeName eq 'CODE'
             )
         },
         replacement => sub( $content, $node, $options, $context ) {
             return (
                 "\n\n    " .
-                ($node->firstChild->textContent =~ s/\n/\n    /gr) .
+                ($node->firstNonBlankChild->textContent =~ s/\n/\n    /gr) .
                 "\n\n"
             )
         },
@@ -141,8 +141,8 @@ our %COMMONMARK_RULES = (
             return (
               $options->{codeBlockStyle} eq 'fenced' &&
               uc $node->nodeName eq 'PRE' &&
-              $node->firstChild &&
-              uc $node->firstChild->nodeName eq 'CODE'
+              $node->firstNonBlankChild &&
+              uc $node->firstNonBlankChild->nodeName eq 'CODE'
             )
         },
 
@@ -151,7 +151,6 @@ our %COMMONMARK_RULES = (
             (my $language) = ($className =~ /language-(\S+)/);
             $language //= '';
             my $code = $node->firstChild->textContent;
-
             my $fenceChar = substr( $options->{fence}, 0, 1 );
             my $fenceSize = 3;
             my $fenceInCodeRegex = qr{^${fenceChar}{$fenceSize,}};

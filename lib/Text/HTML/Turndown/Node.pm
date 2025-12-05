@@ -95,6 +95,10 @@ sub _has( $self, $nodeNames ) {
     }
 }
 
+sub firstNonBlankChild( $self ) {
+    return ([$self->_node->nonBlankChildNodes]->[0]);
+}
+
 sub isBlank( $self ) {
        !$self->isVoid
     && !$self->isMeaningfulWhenBlank
