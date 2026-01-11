@@ -1,4 +1,4 @@
-package Text::HTML::Turndown 0.09;
+package Text::HTML::Turndown 0.10;
 use 5.020;
 use Moo 2;
 use experimental 'signatures';
