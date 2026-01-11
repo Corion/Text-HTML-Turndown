@@ -100,9 +100,6 @@ our %COMMONMARK_RULES = (
       filter => 'li',
 
         replacement => sub( $content, $node, $options, $context ) {
-        $content =~ s/^\n+//;       # remove leading newlines
-        $content =~ s/\n+$/\n/;     # replace trailing newlines with just a single one
-        $content =~ s/\n/\n    /gm; # indent
         my $prefix = $options->{bulletListMarker} . '   ';
         my $parent = $node->parentNode;
         if (uc $parent->nodeName eq 'OL') {
@@ -112,6 +109,9 @@ our %COMMONMARK_RULES = (
           my $index = first_index { $_->isEqual($node->_node) } @ch;
           $prefix = ($start ? $start + $index : $index + 1) . '.  '
         }
+        $content =~ s/^\n+//;       # remove leading newlines
+        $content =~ s/\n+$/\n/;     # replace trailing newlines with just a single one
+        $content =~ s/\n/"\n" . (' ' x length($prefix))/gem; # indent
         return (
           $prefix . $content . ($node->nextSibling && $content !~ /\n$/ ? "\n" : '')
         )

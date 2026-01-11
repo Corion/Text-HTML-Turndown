@@ -265,24 +265,10 @@ link")</pre>
 end</code></pre></div>
 
   <pre class="expected">    def code_block
-      # 42 &lt; 9001
+      # 42 < 9001
       "Hello world!"
     end</pre>
 </div>
-
-<div class="case" data-name="pre/code block with whitespace">
-  <div class="input"><pre>
-    <code>def code_block
-  # 42 &lt; 9001
-  "Hello world!"
-end</code></pre></div>
-
-  <pre class="expected">    def code_block
-      # 42 &lt; 9001
-      "Hello world!"
-    end</pre>
-</div>
-
 
 <div class="case" data-name="multiple pre/code blocks">
   <div class="input"><pre><code>def first_code_block
@@ -398,6 +384,20 @@ def a_fenced_code block; end
   <pre class="expected">42.  Ordered list item 42
 43.  Ordered list item 43
 44.  Ordered list item 44</pre>
+</div>
+
+<div class="case" data-name="ol with content">
+  <div class="input">
+    <ol start="42">
+      <li>
+        <p>Ordered list item 42</p>
+        <p>Ordered list's additional content</p>
+      </li>
+    </ol>
+  </div>
+  <pre class="expected">42.  Ordered list item 42
+     
+     Ordered list's additional content</pre>
 </div>
 
 <div class="case" data-name="list spacing">
